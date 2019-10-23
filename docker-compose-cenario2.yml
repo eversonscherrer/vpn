@@ -1,0 +1,46 @@
+version: '3'
+
+services:
+  vpn-server:
+    cap_add:
+     - NET_ADMIN
+    image: centos6.10vpn:c2srv3
+    container_name: vpn-server
+    privileged: true
+    restart: always
+    networks: 
+      - vpnvpn
+      - redelocal100100
+    devices:
+    - /dev/net/tun:/dev/net/tun
+    command: sh /script.sh
+    tty: true
+  vpn-client:
+    cap_add:
+     - NET_ADMIN
+    image: centos6.10vpn:c2client
+    container_name: vpn-client
+    privileged: true   
+    restart: always
+    networks:
+    - vpnvpn
+    devices:
+    - /dev/net/tun:/dev/net/tun
+    tty: true
+  client-rede:
+    cap_add:
+     - NET_ADMIN
+    image: centos6.10vpn:c2client
+    container_name: client-rede
+    privileged: true
+    restart: always
+    networks: 
+    - redelocal100100   
+    tty: true
+networks:
+  vpnvpn:
+    external: 
+      name: vpn
+  redelocal100100:
+    external: 
+      name: redelocal100
