@@ -1,0 +1,53 @@
+# Modulos para passar pelo Firewall
+/sbin/modprobe ip_conntrack
+/sbin/modprobe pptp
+/sbin/modprobe ip_gre
+/sbin/modprobe ip_nat_pptp
+/sbin/modprobe ip_conntrack_pptp
+/sbin/modprobe nf_conntrack_pptp
+
+# Habilitando Roteamento
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+# Limpando Regras
+iptables -t filter -F
+iptables -t filter -X
+iptables -t nat -F
+iptables -t nat -X
+iptables -t mangle -F
+iptables -t mangle -X
+
+# Habilitando Politica Padrao
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT DROP
+
+# Habilitando Interface Loopback
+iptables -I INPUT -i lo -j ACCEPT
+iptables -I OUTPUT -o lo -j ACCEPT
+
+# Habilitando Ping
+iptables -A FORWARD -p icmp -j ACCEPT
+iptables -A INPUT -p icmp -j ACCEPT
+iptables -A OUTPUT -p icmp -j ACCEPT
+
+#Habilitando Verificacao Estado Pacote...      "
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m state --state ESTABLISHED,RELATED,NEW -j ACCEPT
+iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Redirecionamento VPN
+iptables -t nat -A PREROUTING -i $IF_EXT -d $IP_EXT -p tcp --dport 1723 -j DNAT --to 192.168.200.17:1723
+iptables -t nat -A PREROUTING -i $IF_EXT -d $IP_EXT -p udp --dport 1701 -j DNAT --to 192.168.200.17:1701
+iptables -t nat -A PREROUTING -i $IF_EXT -d $IP_EXT -p gre -j DNAT --to 192.168.200.17
+
+# Regras para VPN
+iptables -A FORWARD -p 47 -s 192.168.10.10 -j ACCEPT
+iptables -A FORWARD -p udp -s 192.168.10.10 --sport 1723 -j ACCEPT
+iptables -A FORWARD -p tcp -s 192.168.10.10 --sport 1723 -j ACCEPT
+iptables -t nat -A PREROUTING -p 47 -d 200.100.10.40 -j DNAT --to 192.168.10.10
+iptables -t nat -A PREROUTING -p udp -d 200.100.10.40 --dport 1723 -j DNAT --to 192.168.10.10
+iptables -t nat -A PREROUTING -p tcp -d 200.100.10.40 --dport 1723 -j DNAT --to 192.168.10.10
+iptables -t nat -A POSTROUTING -p udp -d 192.168.10.10 -j SNAT --to 200.100.10.2
+iptables -t nat -A POSTROUTING -p tcp -d 192.168.10.10 -j SNAT --to 200.100.10.2
+iptables -t nat -A POSTROUTING -p 47 -d 192.168.10.10 -j SNAT --to 200.100.10.2
